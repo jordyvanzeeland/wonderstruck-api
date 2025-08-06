@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Suppliers;
+use App\Repository\SuppliersRepository;
 
 class SuppliersController extends AbstractController
 {
@@ -16,9 +17,9 @@ class SuppliersController extends AbstractController
      */
 
     #[Route('/api/suppliers', name: 'get_suppliers')]
-    public function getSuppliers(EntityManagerInterface $entityManager): JsonResponse
+    public function getSuppliers(SuppliersRepository $suppliersRepository): JsonResponse
     {
-        $suppliers = $entityManager->getRepository(Suppliers::class)->findAll();
+        $suppliers = $suppliersRepository->findAll();
         return $this->json($suppliers, 200);
     }
 
@@ -28,9 +29,9 @@ class SuppliersController extends AbstractController
      */
 
      #[Route('/api/supplier/{id}', name: 'get_supplier_id')]
-     public function getSupplierById(EntityManagerInterface $entityManager, int $id): JsonResponse
+     public function getSupplierById(SuppliersRepository $suppliersRepository, int $id): JsonResponse
      {
-         $supplier = $entityManager->getRepository(Suppliers::class)->find($id);
+         $supplier = $suppliersRepository->find($id);
  
          if(!$supplier){
              return $this->json([
@@ -46,7 +47,7 @@ class SuppliersController extends AbstractController
      */
 
     #[Route('/api/suppliers/insert', name: 'insert_supplier', methods: ['POST'])]
-    public function insertSupplier(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    public function insertSupplier(Request $request, SuppliersRepository $suppliersRepository): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
 
@@ -58,8 +59,7 @@ class SuppliersController extends AbstractController
         $supplier->setEmail($data['email']);
         $supplier->setPhone($data['phone']);
 
-        $entityManager->persist($supplier);
-        $entityManager->flush();
+        $suppliersRepository->save($supplier);
 
         return $this->json([
             'message' => 'Supplier added',
@@ -73,9 +73,9 @@ class SuppliersController extends AbstractController
      */
 
      #[Route('/api/supplier/{id}/update', name: 'update_supplier', methods: ['PUT'])]
-     public function updateSupplier(Request $request, EntityManagerInterface $entityManager, int $id): JsonResponse
+     public function updateSupplier(Request $request, SuppliersRepository $suppliersRepository, int $id): JsonResponse
      {
-        $supplier = $entityManager->getRepository(Suppliers::class)->find($id);
+        $supplier = $suppliersRepository->find($id);
 
         if(!$supplier){
             return $this->json([
@@ -92,7 +92,7 @@ class SuppliersController extends AbstractController
         $supplier->setEmail($data['email']);
         $supplier->setPhone($data['phone']);
 
-        $entityManager->flush();
+        $suppliersRepository->update();
 
         return $this->json([
             'message' => 'Supplier updated',
@@ -106,9 +106,9 @@ class SuppliersController extends AbstractController
      */
 
     #[Route('/api/supplier/{id}/delete', name: 'delete_supplier', methods: ['DELETE'])]
-    public function deleteSupplier(EntityManagerInterface $entityManager, int $id): JsonResponse
+    public function deleteSupplier(SuppliersRepository $suppliersRepository, int $id): JsonResponse
     {
-        $supplier = $entityManager->getRepository(Suppliers::class)->find($id);
+        $supplier = $suppliersRepository->find($id);
 
         if(!$supplier){
             return $this->json([
@@ -116,8 +116,7 @@ class SuppliersController extends AbstractController
             ]);
         }
 
-        $entityManager->remove($supplier);
-        $entityManager->flush();
+        $suppliersRepository->remove($supplier);
 
         return $this->json([
             'message' => 'supplier deleted'
