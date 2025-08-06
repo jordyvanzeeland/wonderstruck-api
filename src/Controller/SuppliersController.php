@@ -19,8 +19,12 @@ class SuppliersController extends AbstractController
     #[Route('/api/suppliers', name: 'get_suppliers')]
     public function getSuppliers(SuppliersRepository $suppliersRepository): JsonResponse
     {
-        $suppliers = $suppliersRepository->findAll();
-        return $this->json($suppliers, 200);
+        try {
+            $suppliers = $suppliersRepository->findAll();
+            return $this->json($suppliers, 200);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to get suppliers', 'details' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -31,15 +35,19 @@ class SuppliersController extends AbstractController
      #[Route('/api/supplier/{id}', name: 'get_supplier_id')]
      public function getSupplierById(SuppliersRepository $suppliersRepository, int $id): JsonResponse
      {
-         $supplier = $suppliersRepository->find($id);
- 
-         if(!$supplier){
-             return $this->json([
-                 'message' => 'Supplier not found'
-             ]);
-         }
- 
-         return $this->json($supplier, 200);
+        try{
+            $supplier = $suppliersRepository->find($id);
+    
+            if(!$supplier){
+                return $this->json([
+                    'message' => 'Supplier not found'
+                ]);
+            }
+    
+            return $this->json($supplier, 200);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to get supplier', 'details' => $e->getMessage()], 500);
+        }
      }
 
      /**
@@ -49,22 +57,37 @@ class SuppliersController extends AbstractController
     #[Route('/api/suppliers/insert', name: 'insert_supplier', methods: ['POST'])]
     public function insertSupplier(Request $request, SuppliersRepository $suppliersRepository): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
+        try {
+            $data = json_decode($request->getContent(), true);
 
-        $supplier = new Suppliers();
-        $supplier->setName($data['name']);
-        $supplier->setAddress($data['address']);
-        $supplier->setZipcode($data['zipcode']);
-        $supplier->setCity($data['city']);
-        $supplier->setEmail($data['email']);
-        $supplier->setPhone($data['phone']);
+            if (!is_array($data)) {
+                return $this->json(['error' => 'Invalid JSON payload'], 400);
+            }
 
-        $suppliersRepository->save($supplier);
+            $requiredFields = ['name', 'address', 'zipcode', 'city', 'email', 'phone'];
+            foreach ($requiredFields as $field) {
+                if (empty($data[$field])) {
+                    return $this->json(['error' => "Missing or empty field: $field"], 400);
+                }
+            }
 
-        return $this->json([
-            'message' => 'Supplier added',
-            'supplier' => $supplier
-        ], 201);
+            $supplier = (new Suppliers())
+                        ->setName($data['name'])
+                        ->setAddress($data['address'])
+                        ->setZipcode($data['zipcode'])
+                        ->setCity($data['city'])
+                        ->setEmail($data['email'])
+                        ->setPhone($data['phone']);
+                        
+            $suppliersRepository->save($supplier);
+
+            return $this->json([
+                'message' => 'Supplier added',
+                'supplier' => $supplier
+            ], 201);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to save supplier', 'details' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -75,29 +98,45 @@ class SuppliersController extends AbstractController
      #[Route('/api/supplier/{id}/update', name: 'update_supplier', methods: ['PUT'])]
      public function updateSupplier(Request $request, SuppliersRepository $suppliersRepository, int $id): JsonResponse
      {
-        $supplier = $suppliersRepository->find($id);
+        try{
+            $supplier = $suppliersRepository->find($id);
 
-        if(!$supplier){
+            if(!$supplier){
+                return $this->json([
+                    'message' => 'Supplier not found'
+                ]);
+            }
+
+            $data = json_decode($request->getContent(), true);
+
+            if (!is_array($data)) {
+                return $this->json(['error' => 'Invalid JSON payload'], 400);
+            }
+
+            $requiredFields = ['name', 'address', 'zipcode', 'city', 'email', 'phone'];
+            foreach ($requiredFields as $field) {
+                if (empty($data[$field])) {
+                    return $this->json(['error' => "Missing or empty field: $field"], 400);
+                }
+            }
+
+            $supplier->setName($data['name']);
+            $supplier->setAddress($data['address']);
+            $supplier->setZipcode($data['zipcode']);
+            $supplier->setCity($data['city']);
+            $supplier->setEmail($data['email']);
+            $supplier->setPhone($data['phone']);
+
+            $suppliersRepository->update();
+
             return $this->json([
-                'message' => 'Supplier not found'
-            ]);
+                'message' => 'Supplier updated',
+                'supplier' => $supplier
+            ], 201);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to save supplier', 'details' => $e->getMessage()], 500);
         }
-
-        $data = json_decode($request->getContent(), true);
-
-        $supplier->setName($data['name']);
-        $supplier->setAddress($data['address']);
-        $supplier->setZipcode($data['zipcode']);
-        $supplier->setCity($data['city']);
-        $supplier->setEmail($data['email']);
-        $supplier->setPhone($data['phone']);
-
-        $suppliersRepository->update();
-
-        return $this->json([
-            'message' => 'Supplier updated',
-            'supplier' => $supplier
-        ], 201);
+        
      }
 
      /**
@@ -108,18 +147,22 @@ class SuppliersController extends AbstractController
     #[Route('/api/supplier/{id}/delete', name: 'delete_supplier', methods: ['DELETE'])]
     public function deleteSupplier(SuppliersRepository $suppliersRepository, int $id): JsonResponse
     {
-        $supplier = $suppliersRepository->find($id);
+        try{
+            $supplier = $suppliersRepository->find($id);
 
-        if(!$supplier){
+            if(!$supplier){
+                return $this->json([
+                    'message' => 'supplier not found'
+                ]);
+            }
+    
+            $suppliersRepository->remove($supplier);
+    
             return $this->json([
-                'message' => 'supplier not found'
-            ]);
+                'message' => 'supplier deleted'
+            ], 201);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to save supplier', 'details' => $e->getMessage()], 500);
         }
-
-        $suppliersRepository->remove($supplier);
-
-        return $this->json([
-            'message' => 'supplier deleted'
-        ], 201);
     }
 }
